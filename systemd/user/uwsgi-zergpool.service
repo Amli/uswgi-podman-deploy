@@ -1,0 +1,21 @@
+[Unit]
+Description=Zerg pool for uwsgi
+
+[Service]
+ExecStart=uwsgi -M \
+                --plugins zergpool,http \
+                --http :9000 \
+                --http-to 127.0.0.1:3031 \
+                --die-on-term \
+                --zerg-pool %t/uwsgi/zerg-pool:127.0.0.1:3031 \
+                --stats %t/uwsgi/zergpool-statsock
+ExecReload=kill -HUP $MAINPID
+Restart=on-failure
+KillSignal=SIGTERM
+Type=notify
+RuntimeDirectory=uwsgi
+RuntimeDirectoryPreserve=yes
+
+[Install]
+#WantedBy=default.target
+

@@ -1,0 +1,29 @@
+[Unit]
+Description=Zergling for uwsgi
+After=uwsgi-zergpool.service
+Requires=uwsgi-zergpool.service
+
+[Service]
+Environment=NOMINAL_WORKERS_COUNT=10
+Environment=RUNNING_CONTAINER_NAME=zergling-running
+Environment=PREVIOUS_CONTAINER_NAME=zergling-previous
+PassEnvironment=
+
+ExecStart=podman run -d --conmon-pidfile %t/uwsgi/zergling.pid --name $RUNNING_CONTAINER_NAME --cgroups=no-conmon --network host -v %t/uwsgi/zerg-pool:/opt/run/zerg-pool uwsgi-basic:current \
+            --zerg /opt/run/zerg-pool -p $NOMINAL_WORKERS_COUNT --cheaper-initial $NOMINAL_WORKERS_COUNT --cheaper 1
+ExecStartPre=/bin/rm -f $PIDFILE
+
+
+ExecStop=podman stop --ignore $RUNNING_CONTAINER_NAME $PREVIOUS_CONTAINER_NAME
+ExecStopPost=podman rm --ignore -f -v $RUNNING_CONTAINER_NAME $PREVIOUS_CONTAINER_NAME > /dev/null
+
+ExecReload=uwsgi-reload.sh %t/uwsgi/zergling.pid %t/uwsgi/zerg-pool $NOMINAL_WORKERS_COUNT 
+
+PIDFile=%t/uwsgi/zergling.pid
+Restart=on-failure
+Type=forking
+RuntimeDirectory=uwsgi
+RuntimeDirectoryPreserve=yes
+
+[Install]
+#WantedBy=default.target
